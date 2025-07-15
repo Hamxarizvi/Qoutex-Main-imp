@@ -1,8 +1,7 @@
 import requests
 import time
-import talib
-import numpy as np
 import pandas as pd
+import pandas_ta as ta
 import telegram
 
 # ========== CONFIG ==========
@@ -33,21 +32,19 @@ def fetch_candles():
         return None
 
 def analyze(df):
-    close = df["close"].values
-    rsi = talib.RSI(close, timeperiod=14)
-    macd, macdsignal, macdhist = talib.MACD(close)
-    ema_fast = talib.EMA(close, timeperiod=5)
-    ema_slow = talib.EMA(close, timeperiod=13)
+    df["rsi"] = ta.rsi(df["close"], length=14)
+    macd = ta.macd(df["close"])
+    df["macd"] = macd["MACD_12_26_9"]
+    df["macdsignal"] = macd["MACDs_12_26_9"]
+    df["ema_fast"] = ta.ema(df["close"], length=5)
+    df["ema_slow"] = ta.ema(df["close"], length=13)
 
-    if len(close) < 20:
-        return None
-
-    if rsi[-1] > 70 and macd[-1] < macdsignal[-1] and ema_fast[-1] < ema_slow[-1]:
+    last = df.iloc[-1]
+    if last["rsi"] > 70 and last["macd"] < last["macdsignal"] and last["ema_fast"] < last["ema_slow"]:
         return "SELL"
-    elif rsi[-1] < 30 and macd[-1] > macdsignal[-1] and ema_fast[-1] > ema_slow[-1]:
+    elif last["rsi"] < 30 and last["macd"] > last["macdsignal"] and last["ema_fast"] > last["ema_slow"]:
         return "BUY"
-    else:
-        return None
+    return None
 
 def send_signal(signal):
     msg = f"\n🔥 *Binary Signal Alert* 🔥\nPair: {PAIR}\nAction: {signal} {'📈' if signal=='BUY' else '📉'}\nTimeframe: 1 Minute\nStrategy: RSI + MACD + EMA\nTime: {time.strftime('%H:%M:%S')}"
@@ -65,4 +62,4 @@ while True:
         signal = analyze(data)
         if signal:
             send_signal(signal)
-    time.sleep(60)  # Wait for next candle
+    time.sleep(60)

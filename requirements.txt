@@ -1,5 +1,4 @@
 pandas
-numpy
+pandas-ta
 requests
 python-telegram-bot
-ta-lib
